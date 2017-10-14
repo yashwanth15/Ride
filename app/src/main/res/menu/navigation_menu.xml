@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/paymentNavigation"
+        android:title="Payment"></item>
+
+    <item android:id="@+id/yourTripsNavigation"
+        android:title="Your Trips"></item>
+
+    <item android:id="@+id/freeRidesNavigation"
+        android:title="Free Rides"></item>
+
+    <item android:id="@+id/settingsNavigation"
+        android:title="Settings"></item>
+</menu>
