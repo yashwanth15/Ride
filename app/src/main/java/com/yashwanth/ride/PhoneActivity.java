@@ -47,7 +47,7 @@ public class PhoneActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
 
         if (mAuth.getCurrentUser()!=null){
-            startActivity(new Intent(this,DriverMapActivity.class));
+            startActivity(new Intent(this,CustomerOrDriverActivity.class));
             finish();
             return;
         }
@@ -123,7 +123,7 @@ public class PhoneActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             // Log.d(TAG, "signInWithCredential:success");
-                            startActivity(new Intent(PhoneActivity.this,DriverMapActivity.class));
+                            startActivity(new Intent(PhoneActivity.this,CustomerOrDriverActivity.class));
                             Toast.makeText(PhoneActivity.this,"Verification Done",Toast.LENGTH_SHORT).show();
                             // ...
                         } else {

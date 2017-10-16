@@ -18,24 +18,50 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.directions.route.AbstractRouting;
+import com.directions.route.Route;
+import com.directions.route.RouteException;
+import com.directions.route.Routing;
+import com.directions.route.RoutingListener;
+import com.firebase.geofire.GeoFire;
+import com.firebase.geofire.GeoLocation;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
+import org.w3c.dom.Text;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static android.app.PendingIntent.getActivity;
+import static com.yashwanth.ride.R.id.map;
 
-public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCallback,GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
+public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCallback,GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener, RoutingListener {
 
     private GoogleMap mMap;
     GoogleApiClient mGoogleApiClient;
@@ -43,10 +69,23 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
     LocationRequest mLocationRequest;
     SupportMapFragment mapFragment;
 
+    private String user_id;
+
+    private LatLng latlngDestination;
+
+    private Marker destinationMarker;
+
     private DrawerLayout mDrawerLayout;
     private ActionBarDrawerToggle mToggle;
 
     private Toolbar mToolbar;
+
+    private Switch mStatus;
+
+    private TextView mStatusLabel;
+
+    private List<Polyline> polylines;
+    private static final int[] COLORS = new int[]{R.color.black};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,7 +94,7 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+                .findFragmentById(map);
 
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(DriverMapActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
@@ -63,10 +102,98 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
             mapFragment.getMapAsync(this);
         }
 
+        polylines = new ArrayList<>();
+
+        mStatus=(Switch)findViewById(R.id.status);
+
+        mStatusLabel=(TextView)findViewById(R.id.statusLabel);
+
+        user_id= FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+
+        mStatus.setChecked(false);
+        mStatus.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if (b){
+                    if (latlngDestination==null){
+                        mStatus.setChecked(false);
+                        Toast.makeText(DriverMapActivity.this, "Select your destination first", Toast.LENGTH_SHORT).show();
+                    }
+                    else{
+                        DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation");
+                        DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination");
+
+                        GeoFire geoFireLocation=new GeoFire(locationref);
+                        GeoFire geoFireDestination=new GeoFire(destinationref);
+                        geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+                        geoFireDestination.setLocation(user_id,new GeoLocation(latlngDestination.latitude,latlngDestination.longitude));
+
+                        mStatusLabel.setText("Online");
+                    }
+                }
+                else{
+                    DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation").child(user_id);
+                    DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination").child(user_id);
+                    locationref.removeValue();
+                    destinationref.removeValue();
+
+                    mStatusLabel.setText("Offline");
+                    if (destinationMarker!=null){
+                        destinationMarker.remove();
+                    }
+                    if (latlngDestination!=null){
+                        latlngDestination=null;
+                    }
+                    eraseRoute();
+                }
+            }
+        });
+
+
+
+
+        //PLACEAUTOCOMPLETE FRAGMENT
+        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment)
+                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                // TODO: Get info about the selected place.
+                latlngDestination=place.getLatLng();
+                if (destinationMarker!=null){
+                    destinationMarker.remove();
+                }
+                if (mStatus.isChecked()){
+                    DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation");
+                    DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination");
+
+                    GeoFire geoFireLocation=new GeoFire(locationref);
+                    GeoFire geoFireDestination=new GeoFire(destinationref);
+                    geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+                    geoFireDestination.setLocation(user_id,new GeoLocation(latlngDestination.latitude,latlngDestination.longitude));
+                }
+                destinationMarker=mMap.addMarker(new MarkerOptions().position(latlngDestination).title("destination"));
+                getRouteToMarker(latlngDestination);
+            }
+
+            @Override
+            public void onError(Status status) {
+                // TODO: Handle the error.
+                Toast.makeText(DriverMapActivity.this, ""+status, Toast.LENGTH_SHORT).show();
+                if (destinationMarker!=null){
+                    destinationMarker.remove();
+                }
+                if (latlngDestination!=null){
+                    latlngDestination=null;
+                }
+            }
+        });
+
 
 
         //NACIGATION SIDE BAR CODE
-
         mToolbar=(Toolbar)findViewById(R.id.nav_no_action);
         setSupportActionBar(mToolbar);
 
@@ -105,8 +232,23 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
                 return true;
             }
         });
+    }
 
-        //NAVIGATION SIDEBAR CODE END
+    private void getRouteToMarker(LatLng latlngDestination) {
+        Routing routing = new Routing.Builder()
+                .travelMode(AbstractRouting.TravelMode.DRIVING)
+                .withListener(this)
+                .alternativeRoutes(false)
+                .waypoints(new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()), latlngDestination)
+                .build();
+        routing.execute();
+    }
+
+    public void eraseRoute(){
+        for (Polyline line:polylines){
+            line.remove();
+        }
+        polylines.clear();
     }
 
     //ON ITEMS SELECTED IN NAVIGATION
@@ -162,8 +304,8 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(10000);
-        mLocationRequest.setFastestInterval(10000);
+        mLocationRequest.setInterval(100000);
+        mLocationRequest.setFastestInterval(100000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -196,5 +338,50 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
                 break;
             }
         }
+    }
+
+    @Override
+    public void onRoutingFailure(RouteException e) {
+        if(e != null) {
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }else {
+            Toast.makeText(this, "Something went wrong, Try again", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onRoutingStart() {
+
+    }
+
+    @Override
+    public void onRoutingSuccess(ArrayList<Route> route, int shortestRouteIndex) {
+        if(polylines.size()>0) {
+            for (Polyline poly : polylines) {
+                poly.remove();
+            }
+        }
+
+        polylines = new ArrayList<>();
+        //add route(s) to the map.
+        for (int i = 0; i <route.size(); i++) {
+
+            //In case of more than 5 alternative routes
+            int colorIndex = i % COLORS.length;
+
+            PolylineOptions polyOptions = new PolylineOptions();
+            polyOptions.color(getResources().getColor(COLORS[colorIndex]));
+            polyOptions.width(10 + i * 3);
+            polyOptions.addAll(route.get(i).getPoints());
+            Polyline polyline = mMap.addPolyline(polyOptions);
+            polylines.add(polyline);
+
+            Toast.makeText(getApplicationContext(),"Route "+ (i+1) +": distance - "+ route.get(i).getDistanceValue()+": duration - "+ route.get(i).getDurationValue(),Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onRoutingCancelled() {
+
     }
 }
