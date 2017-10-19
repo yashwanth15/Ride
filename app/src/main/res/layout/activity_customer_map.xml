@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.yashwanth.ride.DriverMapActivity">
+    tools:context="com.yashwanth.ride.RiderMapActivity">
     <android.support.v4.widget.DrawerLayout
         android:id="@+id/drawLayout"
         android:layout_width="match_parent"
@@ -44,16 +44,24 @@
                         />
                 </android.support.v7.widget.CardView>
             </RelativeLayout>
-            <LinearLayout
+
+            <android.support.v7.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="bottom">
-                <Button
+                android:layout_margin="20sp"
+                android:layout_gravity="bottom">
+                <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="show drivers"
-                    android:id="@+id/showDrivers"/>
-            </LinearLayout>
+                    android:layout_gravity="bottom">
+                    <Button
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Book a Ride"
+                        android:visibility="gone"
+                        android:id="@+id/book"/>
+                </RelativeLayout>
+            </android.support.v7.widget.CardView>
         </fragment>
         <android.support.design.widget.NavigationView
             android:id="@+id/navigationMenu"

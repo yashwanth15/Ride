@@ -4,45 +4,38 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.yashwanth.ride.UserInfoActivity">
+    tools:context="com.yashwanth.ride.RiderMapActivity">
 
     <ImageView
         android:layout_width="100sp"
         android:layout_height="100sp"
         android:id="@+id/profileImage"
-        android:src="@mipmap/ic_image_icon"
+        android:src="@mipmap/upload_image"
+        android:layout_marginBottom="49dp"
+        android:layout_above="@+id/name"
         android:layout_centerHorizontal="true" />
-
+    
     <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/name"
-        android:layout_below="@+id/profileImage"
+        android:shadowColor="@color/black"
+        android:textColor="@color/black"
         android:hint="Name"
         android:textSize="20dp"
-        android:textAlignment="center"/>
-
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/phone"
-        android:hint="Phone"
-        android:textSize="20dp"
-        android:layout_below="@+id/name"
-        android:textAlignment="center"/>
+        android:textAlignment="center"
+        android:layout_centerVertical="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
 
     <Button
         android:id="@+id/confirm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/phone"
-        android:text="confirm"/>
-
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/back"
-        android:layout_below="@+id/confirm"
-        android:text="back"/>
+        android:text="confirm"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginBottom="154dp" />
 
 </RelativeLayout>

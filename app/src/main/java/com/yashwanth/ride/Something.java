@@ -27,6 +27,13 @@ public class Something extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 mAuth.signOut();
+                String CustomerOrRider=getIntent().getStringExtra("CustomerOrRider");
+                if (CustomerOrRider.equals("rider")){
+                    RiderMapActivity.riderMapActivityObject.finish();
+                }
+                else if (CustomerOrRider.equals("customer")){
+                    CustomerMapActivity.CustomerMapActivityObject.finish();
+                }
                 startActivity(new Intent(Something.this,PhoneActivity.class));
                 finish();
             }

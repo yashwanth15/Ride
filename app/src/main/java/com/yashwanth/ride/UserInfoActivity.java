@@ -4,14 +4,15 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -33,8 +34,8 @@ import java.util.Map;
 
 public class UserInfoActivity extends AppCompatActivity {
 
-    private Button mConfirm,mBack;
-    private EditText mName,mPhone;
+    private Button mConfirm;
+    private EditText mName;
     private ImageView mProfileImage;
 
     private Uri resultUri;
@@ -43,43 +44,23 @@ public class UserInfoActivity extends AppCompatActivity {
 
     private DatabaseReference mCustomerDatabase;
 
-    private String mUserId,mname,mphone,mprofileImageUrl;
+    private String mUserId,mname,mprofileImageUrl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_user_info);
+        setContentView(R.layout.activity_customer_info);
 
         mProfileImage=(ImageView) findViewById(R.id.profileImage);
 
         mConfirm=(Button)findViewById(R.id.confirm);
-        mBack=(Button)findViewById(R.id.back);
 
         mName=(EditText)findViewById(R.id.name);
-        mPhone=(EditText)findViewById(R.id.phone);
 
-        firebaseAuth=FirebaseAuth.getInstance();
+        firebaseAuth= FirebaseAuth.getInstance();
         mUserId=firebaseAuth.getCurrentUser().getUid();
 
-        mCustomerDatabase= FirebaseDatabase.getInstance().getReference().child("Users").child("Customers").child(mUserId);
-
-        //to check if info already exists
-        mCustomerDatabase.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists()){
-                    startActivity(new Intent(UserInfoActivity.this,Something.class));
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        });
-
-        getUserInfo();
-
+        mCustomerDatabase= FirebaseDatabase.getInstance().getReference().child("Users").child(mUserId);
         mProfileImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -92,35 +73,29 @@ public class UserInfoActivity extends AppCompatActivity {
         mConfirm.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                saveUserInformation();
-            }
-        });
-
-        mBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                finish();
-                return;
+                mname=mName.getText().toString();
+                if (mName==null&&resultUri==null){
+                    Toast.makeText(UserInfoActivity.this, "Please fill all the details!", Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    saveUserInformation();
+                }
             }
         });
 
     }
 
 
-
-    private void getUserInfo(){
+    /*private void getUserInfo(){
         mCustomerDatabase.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()&&dataSnapshot.getChildrenCount()>0){
+
                     Map<String,Object> map=(Map<String,Object>) dataSnapshot.getValue();
                     if (map.get("name")!=null){
                         mname=map.get("name").toString();
                         mName.setText(mname);
-                    }
-                    if (map.get("phone")!=null){
-                        mphone=map.get("phone").toString();
-                        mPhone.setText(mphone);
                     }
                     if (map.get("profileImageUrl")!=null){
                         mprofileImageUrl=map.get("profileImageUrl").toString();
@@ -134,17 +109,13 @@ public class UserInfoActivity extends AppCompatActivity {
 
             }
         });
-    }
+    }*/
 
 
     private void saveUserInformation(){
 
-        mname=mName.getText().toString();
-        mphone=mPhone.getText().toString();
-
         Map userInfo=new HashMap();
         userInfo.put("name",mname);
-        userInfo.put("phone",mphone);
 
         mCustomerDatabase.updateChildren(userInfo);
 
@@ -177,11 +148,11 @@ public class UserInfoActivity extends AppCompatActivity {
                     Uri downloadUrl=taskSnapshot.getDownloadUrl();
 
                     Map imageMap=new HashMap();
-                    imageMap.put("profileImageUrl",downloadUrl.toString());
+                    imageMap.put("profile_image",downloadUrl.toString());
                     mCustomerDatabase.updateChildren(imageMap);
 
+                    startActivity(new Intent(UserInfoActivity.this,CustomerOrDriverActivity.class));
                     finish();
-                    return;
                 }
             });
 

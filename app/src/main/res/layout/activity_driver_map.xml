@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.yashwanth.ride.DriverMapActivity">
+    tools:context="com.yashwanth.ride.RiderMapActivity">
 
     <android.support.v4.widget.DrawerLayout
         android:id="@+id/drawLayout"
@@ -19,7 +19,7 @@
             android:name="com.google.android.gms.maps.SupportMapFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            tools:context="com.yashwanth.ride.DriverMapActivity">
+            tools:context="com.yashwanth.ride.RiderMapActivity">
 
             <LinearLayout
                 android:layout_width="match_parent"

@@ -1,25 +1,19 @@
 package com.yashwanth.ride;
 
-import android.*;
 import android.Manifest;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationListener;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -53,15 +47,15 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import org.w3c.dom.Text;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import static android.app.PendingIntent.getActivity;
 import static com.yashwanth.ride.R.id.map;
 
-public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCallback,GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener, RoutingListener {
+public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCallback,GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener, RoutingListener {
+
+    static RiderMapActivity riderMapActivityObject;
 
     private GoogleMap mMap;
     GoogleApiClient mGoogleApiClient;
@@ -97,10 +91,12 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
                 .findFragmentById(map);
 
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(DriverMapActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
+            ActivityCompat.requestPermissions(RiderMapActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
         }else{
             mapFragment.getMapAsync(this);
         }
+
+        riderMapActivityObject =this;
 
         polylines = new ArrayList<>();
 
@@ -118,16 +114,10 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
                 if (b){
                     if (latlngDestination==null){
                         mStatus.setChecked(false);
-                        Toast.makeText(DriverMapActivity.this, "Select your destination first", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(RiderMapActivity.this, "Select your destination first", Toast.LENGTH_SHORT).show();
                     }
                     else{
-                        DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation");
-                        DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination");
-
-                        GeoFire geoFireLocation=new GeoFire(locationref);
-                        GeoFire geoFireDestination=new GeoFire(destinationref);
-                        geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
-                        geoFireDestination.setLocation(user_id,new GeoLocation(latlngDestination.latitude,latlngDestination.longitude));
+                        addRiderRoute();
 
                         mStatusLabel.setText("Online");
                     }
@@ -166,13 +156,7 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
                     destinationMarker.remove();
                 }
                 if (mStatus.isChecked()){
-                    DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation");
-                    DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination");
-
-                    GeoFire geoFireLocation=new GeoFire(locationref);
-                    GeoFire geoFireDestination=new GeoFire(destinationref);
-                    geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
-                    geoFireDestination.setLocation(user_id,new GeoLocation(latlngDestination.latitude,latlngDestination.longitude));
+                    addRiderRoute();
                 }
                 destinationMarker=mMap.addMarker(new MarkerOptions().position(latlngDestination).title("destination"));
                 getRouteToMarker(latlngDestination);
@@ -181,7 +165,7 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
             @Override
             public void onError(Status status) {
                 // TODO: Handle the error.
-                Toast.makeText(DriverMapActivity.this, ""+status, Toast.LENGTH_SHORT).show();
+                Toast.makeText(RiderMapActivity.this, ""+status, Toast.LENGTH_SHORT).show();
                 if (destinationMarker!=null){
                     destinationMarker.remove();
                 }
@@ -214,6 +198,7 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
                 switch (menuItem.getItemId()) {
                     case(R.id.settingsNavigation):
                         Intent intent = new Intent(getApplicationContext(),Something.class);
+                        intent.putExtra("CustomerOrRider","rider");
                         startActivity(intent);
                         break;
                     /*case(R.id.freeRidesNavigation):
@@ -277,7 +262,7 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
         mMap = googleMap;
 
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(DriverMapActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
+            ActivityCompat.requestPermissions(RiderMapActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
         }
         buildGoogleApiClient();
         mMap.setMyLocationEnabled(true);
@@ -299,6 +284,10 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
         LatLng latLng=new LatLng(location.getLatitude(),location.getLongitude());
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
         mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+
+        if (mStatus.isChecked()&&latlngDestination!=null){
+            addRiderRoute();
+        }
     }
 
     @Override
@@ -309,7 +298,7 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(DriverMapActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
+            ActivityCompat.requestPermissions(RiderMapActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
         }
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
     }
@@ -383,5 +372,15 @@ public class DriverMapActivity extends AppCompatActivity implements OnMapReadyCa
     @Override
     public void onRoutingCancelled() {
 
+    }
+
+    private void addRiderRoute(){
+        DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation");
+        DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination");
+
+        GeoFire geoFireLocation=new GeoFire(locationref);
+        GeoFire geoFireDestination=new GeoFire(destinationref);
+        geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+        geoFireDestination.setLocation(user_id,new GeoLocation(latlngDestination.latitude,latlngDestination.longitude));
     }
 }

@@ -1,5 +1,6 @@
 package com.yashwanth.ride;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -16,9 +17,13 @@ import com.google.firebase.FirebaseTooManyRequestsException;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.PhoneAuthCredential;
 import com.google.firebase.auth.PhoneAuthProvider;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class PhoneActivity extends AppCompatActivity {
 
@@ -32,6 +37,8 @@ public class PhoneActivity extends AppCompatActivity {
     private PhoneAuthProvider.ForceResendingToken mResendToken;
     private PhoneAuthProvider.OnVerificationStateChangedCallbacks mCallbacks;
     private FirebaseAuth mAuth;
+
+    private ProgressDialog dialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,10 +54,10 @@ public class PhoneActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
 
         if (mAuth.getCurrentUser()!=null){
-            startActivity(new Intent(this,CustomerOrDriverActivity.class));
-            finish();
-            return;
+            checkUserInfo();
         }
+
+        dialog = new ProgressDialog(PhoneActivity.this);
 
         mCallbacks = new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 
@@ -59,7 +66,8 @@ public class PhoneActivity extends AppCompatActivity {
                 // Log.d(TAG, "onVerificationCompleted:" + credential);
                 mVerificationInProgress = false;
                 Toast.makeText(PhoneActivity.this,"Verification Complete",Toast.LENGTH_SHORT).show();
-
+                dialog.setMessage("Logging you in..");
+                dialog.show();
                 signInWithPhoneAuthCredential(credential);
             }
 
@@ -95,21 +103,31 @@ public class PhoneActivity extends AppCompatActivity {
         mSendOTP.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                PhoneAuthProvider.getInstance().verifyPhoneNumber(
-                        mPhoneNumber.getText().toString(),
-                        60,
-                        java.util.concurrent.TimeUnit.SECONDS,
-                        PhoneActivity.this,
-                        mCallbacks);
+                if (mPhoneNumber.getText()==null){
+                    Toast.makeText(PhoneActivity.this, "Enter an OTP to verify", Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    PhoneAuthProvider.getInstance().verifyPhoneNumber(
+                            mPhoneNumber.getText().toString(),
+                            60,
+                            java.util.concurrent.TimeUnit.SECONDS,
+                            PhoneActivity.this,
+                            mCallbacks);
+                }
             }
         });
 
         mVerifyOTP.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                PhoneAuthCredential credential = PhoneAuthProvider.getCredential(mVerificationId, mOTP.getText().toString());
-                // [END verify_with_code]
-                signInWithPhoneAuthCredential(credential);
+                if (mOTP.getText()==null){
+                    Toast.makeText(PhoneActivity.this, "Enter an OTP to verify", Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    PhoneAuthCredential credential = PhoneAuthProvider.getCredential(mVerificationId, mOTP.getText().toString());
+                    // [END verify_with_code]
+                    signInWithPhoneAuthCredential(credential);
+                }
             }
         });
 
@@ -123,8 +141,7 @@ public class PhoneActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             // Log.d(TAG, "signInWithCredential:success");
-                            startActivity(new Intent(PhoneActivity.this,CustomerOrDriverActivity.class));
-                            Toast.makeText(PhoneActivity.this,"Verification Done",Toast.LENGTH_SHORT).show();
+                            checkUserInfo();
                             // ...
                         } else {
                             // Log.w(TAG, "signInWithCredential:failure", task.getException());
@@ -135,5 +152,34 @@ public class PhoneActivity extends AppCompatActivity {
                         }
                     }
                 });
+    }
+
+    private void checkUserInfo() {
+        String user_id=FirebaseAuth.getInstance().getCurrentUser().getUid();
+        DatabaseReference databaseReference= FirebaseDatabase.getInstance().getReference().child("Users").child(user_id);
+        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dialog!=null){
+                    dialog.dismiss();
+                }
+                if (dataSnapshot.exists()){
+                    startActivity(new Intent(PhoneActivity.this,CustomerOrDriverActivity.class));
+                    finish();
+                    return;
+                }
+                else{
+                    startActivity(new Intent(PhoneActivity.this,UserInfoActivity.class));
+                    finish();
+                    return;
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+
     }
 }

@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.yashwanth.ride.RiderInfoActivity">
+
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <android.support.v7.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="20sp"
+                android:id="@+id/vehicleOption"
+                android:layout_below="@+id/ProfileView">
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Select your vehicle:"
+                        android:textAlignment="center"
+                        android:id="@+id/textViewVehicle"
+                        android:layout_margin="15sp"
+                        android:textColor="@color/black"/>
+                    <RadioGroup
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/radioVehicle"
+                        android:layout_below="@+id/textViewVehicle">
+                        <RadioButton
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Car"
+                            android:layout_margin="10sp"
+                            android:id="@+id/car"/>
+                        <RadioButton
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="MotorCycle"
+                            android:layout_margin="10sp"
+                            android:id="@+id/motorcycle"/>
+                    </RadioGroup>
+                </RelativeLayout>
+            </android.support.v7.widget.CardView>
+            <android.support.v7.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="20sp"
+                android:id="@+id/vehiclePictureView"
+                android:layout_below="@+id/vehicleOption">
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="100sp"
+                        android:layout_height="100sp"
+                        android:id="@+id/vehiclePicture"
+                        android:src="@mipmap/upload_image"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Upload vehicle picture"
+                        android:textColor="@color/black"
+                        android:textAlignment="center"
+                        android:layout_centerVertical="true"
+                        android:layout_toRightOf="@+id/vehiclePicture"/>
+                </RelativeLayout>
+            </android.support.v7.widget.CardView>
+            <android.support.v7.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="20sp"
+                android:id="@+id/RCPictureView"
+                android:layout_below="@+id/vehiclePictureView">
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="100sp"
+                        android:layout_height="100sp"
+                        android:id="@+id/RCPicture"
+                        android:src="@mipmap/upload_image"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Registration Card"
+                        android:textColor="@color/black"
+                        android:textAlignment="center"
+                        android:layout_centerVertical="true"
+                        android:layout_toRightOf="@+id/RCPicture"/>
+                </RelativeLayout>
+            </android.support.v7.widget.CardView>
+            <android.support.v7.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="20sp"
+                android:id="@+id/licenseView"
+                android:layout_below="@+id/RCPictureView">
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="100sp"
+                        android:layout_height="100sp"
+                        android:id="@+id/licensePicture"
+                        android:src="@mipmap/upload_image"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="License"
+                        android:textColor="@color/black"
+                        android:textAlignment="center"
+                        android:layout_centerVertical="true"
+                        android:layout_toRightOf="@+id/licensePicture"/>
+                </RelativeLayout>
+            </android.support.v7.widget.CardView>
+            <android.support.v7.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="20sp"
+                android:id="@+id/aadharPictureView"
+                android:layout_below="@+id/licenseView">
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="100sp"
+                        android:layout_height="100sp"
+                        android:id="@+id/aadharPicture"
+                        android:src="@mipmap/upload_image"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Aadhar card"
+                        android:textColor="@color/black"
+                        android:textAlignment="center"
+                        android:layout_centerVertical="true"
+                        android:layout_toRightOf="@+id/aadharPicture"/>
+                </RelativeLayout>
+            </android.support.v7.widget.CardView>
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/submit"
+                android:text="submit"
+                android:textColor="@color/black"
+                />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+
+</RelativeLayout>
