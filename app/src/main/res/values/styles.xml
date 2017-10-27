@@ -9,12 +9,6 @@
     </style>
     <style name="AppThemeDark" parent="ThemeOverlay.AppCompat.Dark" />
 
-    <style name="Theme.Custom" parent="style/Theme.AppCompat">
-        <item name="windowActionBar">false</item>
-        <item name="windowActionBarOverlay">true</item>
-        <item name="android:windowActionBarOverlay">true</item>
-    </style>
-
     <style name="CustomActionBar" parent="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
         <item name="android:windowActionBarOverlay">true</item>
         <!-- Support library compatibility -->

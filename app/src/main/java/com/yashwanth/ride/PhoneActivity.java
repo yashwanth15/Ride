@@ -45,19 +45,23 @@ public class PhoneActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_phone);
 
+        dialog = new ProgressDialog(PhoneActivity.this);
+
+        mAuth = FirebaseAuth.getInstance();
+
+        if (mAuth.getCurrentUser()!=null){
+            dialog.setMessage("Logging you in..");
+            dialog.show();
+            checkUserInfo();
+        }
+
         mPhoneNumber=(EditText)findViewById(R.id.phoneNumber);
         mOTP=(EditText)findViewById(R.id.OTPeditText);
 
         mSendOTP=(Button)findViewById(R.id.sendOTP);
         mVerifyOTP=(Button) findViewById(R.id.OTPVERIFY);
 
-        mAuth = FirebaseAuth.getInstance();
 
-        if (mAuth.getCurrentUser()!=null){
-            checkUserInfo();
-        }
-
-        dialog = new ProgressDialog(PhoneActivity.this);
 
         mCallbacks = new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 

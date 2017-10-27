@@ -2,9 +2,11 @@ package com.yashwanth.ride;
 
 import android.*;
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.CountDownTimer;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.NavigationView;
@@ -87,6 +89,8 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
 
     private String mUserId;
 
+    private ProgressDialog progressDialogBookRide;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -106,6 +110,8 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
         mBook=(Button)findViewById(R.id.book);
 
         mUserId=FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        progressDialogBookRide=new ProgressDialog(CustomerMapActivity.this);
 
         polylines = new ArrayList<>();
 
@@ -232,6 +238,7 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
 
 
     private Marker mDriverLocationMarker;
+    private Map<String,String> vehicleTypeIcon=new HashMap<String, String>();
     private void getRiderLocation(final  String driverFoundId){
         DatabaseReference driverLocationRef=FirebaseDatabase.getInstance().getReference().child("driversAvailableLocation").child(driverFoundId).child("l");
         driverLocationRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -256,9 +263,11 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
                             if (dataSnapshot.exists()){
                                 String vehicleType=dataSnapshot.getValue().toString();
                                 if (vehicleType.equals("Car")){
+                                    vehicleTypeIcon.put(driverFoundId,"Car");
                                     mDriverLocationMarker=mMap.addMarker(new MarkerOptions().position(driverLocationLatLng).title("Driver Location").icon(BitmapDescriptorFactory.fromResource(R.mipmap.car_icon)));
                                 }
                                 else if(vehicleType.equals("MotorCycle")){
+                                    vehicleTypeIcon.put(driverFoundId,"MotorCycle");
                                     mDriverLocationMarker=mMap.addMarker(new MarkerOptions().position(driverLocationLatLng).title("Rider Location").icon(BitmapDescriptorFactory.fromResource(R.mipmap.rider_location)));
                                 }
                             }
@@ -452,16 +461,127 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
         return false;
     }
 
-    private void bookRider(String key) {
-        DatabaseReference customerLocationRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(key).child("location");
-        DatabaseReference customerDestinationRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(key).child("destination");
 
-        GeoFire geoFireLocation=new GeoFire(customerLocationRef);
-        GeoFire geoFireDestination=new GeoFire(customerDestinationRef);
-
-        geoFireLocation.setLocation(mUserId,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
-        geoFireDestination.setLocation(mUserId,new GeoLocation(latlngDestination.latitude,latlngDestination.longitude));
+    private void bookRider(final String key) {
         mBook.setVisibility(View.GONE);
+        progressDialogBookRide.setMessage("Booking your Ride");
+        progressDialogBookRide.show();
+
+        mMap.clear();
+        //checking if driver is already working
+        DatabaseReference customerRequestRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(key);
+        customerRequestRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if(dataSnapshot.exists()){
+                    Toast.makeText(CustomerMapActivity.this, "Sorry, driver is already working!", Toast.LENGTH_LONG).show();
+                    progressDialogBookRide.dismiss();
+                    markersLocation.clear();
+                    getCloseDrivers();
+                }
+                else{
+                    /*DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation").child(key);
+                    DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination").child(key);
+                    locationref.removeValue();
+                    locationref.removeValue();*/
+
+                    DatabaseReference customerRequestRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(key).child(mUserId);
+                    customerRequestRef.setValue(true);
+
+                    DatabaseReference customerLocationRef=FirebaseDatabase.getInstance().getReference().child("customer_location").child(mUserId);
+
+                    GeoFire geoFireLocation=new GeoFire(customerLocationRef);
+                    GeoFire geoFireDestination=new GeoFire(customerLocationRef);
+
+                    geoFireLocation.setLocation("location",new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+                    geoFireDestination.setLocation("destination",new GeoLocation(latlngDestination.latitude,latlngDestination.longitude));
+
+                    Toast.makeText(CustomerMapActivity.this, "Wait a minute for the driver to respond to your request", Toast.LENGTH_LONG).show();
+
+
+                    new CountDownTimer(40000, 1000) {
+
+                        public void onTick(long millisUntilFinished) {
+
+                        }
+
+                        public void onFinish() {
+                            if (driverWorkingRef!=null){
+                                driverWorkingRef.removeEventListener(driverWorkingEventListener);
+                                Toast.makeText(CustomerMapActivity.this, "Driver not responding, book another one", Toast.LENGTH_SHORT).show();
+                                progressDialogBookRide.dismiss();
+                                markersLocation.clear();
+                                getCloseDrivers();
+
+                                DatabaseReference customerRequestRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(key);
+                                DatabaseReference customerLocationRef=FirebaseDatabase.getInstance().getReference().child("customer_location").child(mUserId);
+                                customerRequestRef.removeValue();
+                                customerLocationRef.removeValue();
+                            }
+                        }
+                    }.start();
+
+                    getAssignedRiderLocation(key);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+
+    }
+
+
+    //TO REMOVE EVENT LISTENERS
+    private void removeEventListeners() {
+
+
+    }
+
+
+    private DatabaseReference driverWorkingRef;
+    private ValueEventListener driverWorkingEventListener;
+    private Marker assignedDriverMarker;
+    private void getAssignedRiderLocation(String key) {
+        driverWorkingRef=FirebaseDatabase.getInstance().getReference().child("drivers_working").child(key).child("l");
+        driverWorkingEventListener=driverWorkingRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()){
+                    List<Object> map=(List<Object>) dataSnapshot.getValue();
+                    double locationLat=0;
+                    double locationLng=0;
+
+                    if (map.get(0)!=null){
+                        locationLat=Double.parseDouble(map.get(0).toString());
+                    }
+                    if (map.get(1)!=null){
+                        locationLng=Double.parseDouble(map.get(1).toString());
+                    }
+                    final LatLng driverLocationLatLng=new LatLng(locationLat,locationLng);
+
+                    if (assignedDriverMarker!=null){
+                        assignedDriverMarker.remove();
+                    }
+
+                    String vehicleType=vehicleTypeIcon.get(driverFoundId);
+                    if (vehicleType.equals("Car")){
+                        assignedDriverMarker=mMap.addMarker(new MarkerOptions().position(driverLocationLatLng).title("Driver Location").icon(BitmapDescriptorFactory.fromResource(R.mipmap.car_icon)));
+                    }
+                    else if(vehicleType.equals("MotorCycle")){
+                        assignedDriverMarker=mMap.addMarker(new MarkerOptions().position(driverLocationLatLng).title("Rider Location").icon(BitmapDescriptorFactory.fromResource(R.mipmap.rider_location)));
+                    }
+                    Toast.makeText(CustomerMapActivity.this, "Driver arriving", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
     }
 
     private Marker mDriverDestinationMarker;

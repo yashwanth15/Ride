@@ -12,9 +12,14 @@ import android.os.Bundle;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.CardView;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,20 +43,25 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static android.app.PendingIntent.getActivity;
 import static com.yashwanth.ride.R.id.map;
+import static com.yashwanth.ride.R.id.visible;
 
 public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCallback,GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener, RoutingListener {
 
@@ -81,6 +91,12 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
     private List<Polyline> polylines;
     private static final int[] COLORS = new int[]{R.color.black};
 
+    private CardView mBottomCardView;
+    private LinearLayout mYesOrNo;
+    private Button mYes,mNo;
+
+    private DatabaseReference driverWorkingRef;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -106,6 +122,11 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
 
         user_id= FirebaseAuth.getInstance().getCurrentUser().getUid();
 
+        mBottomCardView=(CardView)findViewById(R.id.bottomCardView);
+        mYesOrNo=(LinearLayout) findViewById(R.id.yesOrNo);
+        mYes=(Button) findViewById(R.id.yes);
+        mNo=(Button)findViewById(R.id.no);
+
 
         mStatus.setChecked(false);
         mStatus.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -117,9 +138,10 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
                         Toast.makeText(RiderMapActivity.this, "Select your destination first", Toast.LENGTH_SHORT).show();
                     }
                     else{
+                        //rider is ONLINE
                         addRiderRoute();
-
                         mStatusLabel.setText("Online");
+                        getAssignedCustomer();
                     }
                 }
                 else{
@@ -159,7 +181,8 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
                     addRiderRoute();
                 }
                 destinationMarker=mMap.addMarker(new MarkerOptions().position(latlngDestination).title("destination"));
-                getRouteToMarker(latlngDestination);
+                LatLng latlngLocation=new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude());
+                getRouteToMarker(latlngLocation,latlngDestination);
             }
 
             @Override
@@ -217,14 +240,131 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
                 return true;
             }
         });
+
+        mYes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                driverWorkingRef=FirebaseDatabase.getInstance().getReference().child("drivers_working");
+                GeoFire geoFireLocation=new GeoFire(driverWorkingRef);
+                geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+                mBottomCardView.setVisibility(View.GONE);
+
+                DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation").child(user_id);
+                DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination").child(user_id);
+                locationref.removeValue();
+                destinationref.removeValue();
+            }
+        });
+        mNo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (pickupMarker!=null){
+                    pickupMarker.remove();
+                }
+                if (customerDestinationMarker!=null){
+                    customerDestinationMarker.remove();
+                }
+                customerId=null;
+                eraseRoute();
+                if (assignedCustomerRef!=null){
+                    assignedCustomerRef.removeEventListener(assignedCustomerListener);
+                    assignedCustomerRef.removeValue();
+                }
+            }
+        });
     }
 
-    private void getRouteToMarker(LatLng latlngDestination) {
+    String customerId;
+    DatabaseReference assignedCustomerRef;
+    ValueEventListener assignedCustomerListener;
+    private void getAssignedCustomer() {
+        assignedCustomerRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(user_id);
+        assignedCustomerListener=assignedCustomerRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()&&customerId==null){
+                    customerId=dataSnapshot.getKey();
+                    getAssignedCustomerLocation();
+                    mBottomCardView.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private LatLng customerLocationLatlng;
+    private Marker pickupMarker;
+    private void getAssignedCustomerLocation() {
+        DatabaseReference customerLocationRef=FirebaseDatabase.getInstance().getReference().child("customer_location").child(customerId).child("location").child("l");
+        customerLocationRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()){
+                    List<Object> map=(List<Object>) dataSnapshot.getValue();
+                    double locationLat=0;
+                    double locationLng=0;
+
+                    if (map.get(0)!=null){
+                        locationLat=Double.parseDouble(map.get(0).toString());
+                    }
+                    if (map.get(1)!=null){
+                        locationLng=Double.parseDouble(map.get(1).toString());
+                    }
+                    customerLocationLatlng=new LatLng(locationLat,locationLng);
+                    pickupMarker=mMap.addMarker(new MarkerOptions().position(customerLocationLatlng).title("Pickup Location").icon(BitmapDescriptorFactory.fromResource(R.mipmap.pickup_location)));
+                    getAssignedCustomerDestination();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+
+    private LatLng customerDestinationLatlng;
+    private Marker customerDestinationMarker;
+    private void getAssignedCustomerDestination() {
+        DatabaseReference customerLocationRef=FirebaseDatabase.getInstance().getReference().child("customer_location").child(customerId).child("destination").child("l");
+        customerLocationRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()){
+                    List<Object> map=(List<Object>) dataSnapshot.getValue();
+                    double locationLat=0;
+                    double locationLng=0;
+
+                    if (map.get(0)!=null){
+                        locationLat=Double.parseDouble(map.get(0).toString());
+                    }
+                    if (map.get(1)!=null){
+                        locationLng=Double.parseDouble(map.get(1).toString());
+                    }
+                    customerDestinationLatlng=new LatLng(locationLat,locationLng);
+                    customerDestinationMarker=mMap.addMarker(new MarkerOptions().position(customerDestinationLatlng).title("Customer Destination").icon(BitmapDescriptorFactory.fromResource(R.mipmap.destination)));
+                    getRouteToMarker(customerLocationLatlng,customerDestinationLatlng);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private void getRouteToMarker(LatLng latlngLocation,LatLng latlngDestination) {
         Routing routing = new Routing.Builder()
                 .travelMode(AbstractRouting.TravelMode.DRIVING)
                 .withListener(this)
                 .alternativeRoutes(false)
-                .waypoints(new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()), latlngDestination)
+                .waypoints(latlngLocation, latlngDestination)
                 .build();
         routing.execute();
     }
