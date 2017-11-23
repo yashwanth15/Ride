@@ -60,6 +60,22 @@
                         android:text="Book a Ride"
                         android:visibility="gone"
                         android:id="@+id/book"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Booking Your Ride..."
+                        android:id="@+id/bookRideTextView"
+                        android:visibility="gone"
+                        android:layout_margin="10dp"
+                        android:layout_marginBottom="40dp"
+                        android:textAlignment="center"/>
+                    <Button
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="cancel"
+                        android:visibility="gone"
+                        android:id="@+id/cancel"
+                        android:layout_below="@+id/bookRideTextView"/>
                 </RelativeLayout>
             </android.support.v7.widget.CardView>
         </fragment>

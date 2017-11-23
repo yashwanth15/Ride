@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.CountDownTimer;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.NavigationView;
@@ -94,6 +95,8 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
     private CardView mBottomCardView;
     private LinearLayout mYesOrNo;
     private Button mYes,mNo;
+
+    private Boolean mRequestAccepted=false;
 
     private DatabaseReference driverWorkingRef;
 
@@ -244,6 +247,8 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
         mYes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                mRequestAccepted=true;
+                countDownTimer.cancel();
                 driverWorkingRef=FirebaseDatabase.getInstance().getReference().child("drivers_working");
                 GeoFire geoFireLocation=new GeoFire(driverWorkingRef);
                 geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
@@ -253,39 +258,89 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
                 DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination").child(user_id);
                 locationref.removeValue();
                 destinationref.removeValue();
+                if (assignedCustomerRef!=null){
+                    assignedCustomerRef.removeEventListener(assignedCustomerListener);
+                }
             }
         });
         mNo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (pickupMarker!=null){
-                    pickupMarker.remove();
-                }
-                if (customerDestinationMarker!=null){
-                    customerDestinationMarker.remove();
-                }
-                customerId=null;
-                eraseRoute();
-                if (assignedCustomerRef!=null){
-                    assignedCustomerRef.removeEventListener(assignedCustomerListener);
-                    assignedCustomerRef.removeValue();
-                }
+                mRequestAccepted=false;
+                requestCancled();
             }
         });
+    }
+
+    private void requestCancled() {
+        if (pickupMarker!=null){
+            pickupMarker.remove();
+        }
+        if (customerDestinationMarker!=null){
+            customerDestinationMarker.remove();
+        }
+        customerId=null;
+        eraseRoute();
+        mBottomCardView.setVisibility(View.GONE);
+        getAssignedCustomer();
+        driverWorkingRef=FirebaseDatabase.getInstance().getReference().child("drivers_working").child(user_id);
+        driverWorkingRef.removeValue();
+        addRiderRoute();
+        if (customerCancelRef!=null){
+            customerCancelRef.removeEventListener(customerCancelListener);
+        }
     }
 
     String customerId;
     DatabaseReference assignedCustomerRef;
     ValueEventListener assignedCustomerListener;
+    CountDownTimer countDownTimer;
     private void getAssignedCustomer() {
         assignedCustomerRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(user_id);
         assignedCustomerListener=assignedCustomerRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()&&customerId==null){
+                    ifRequestCanceled();
                     customerId=dataSnapshot.getKey();
                     getAssignedCustomerLocation();
                     mBottomCardView.setVisibility(View.VISIBLE);
+                    if (assignedCustomerRef!=null){
+                        assignedCustomerRef.removeEventListener(assignedCustomerListener);
+                    }
+                    countDownTimer=new CountDownTimer(40000, 1000) {
+
+                        public void onTick(long millisUntilFinished) {
+
+                        }
+
+                        public void onFinish() {
+                            if (!mRequestAccepted){
+                                requestCancled();
+                            }
+                        }
+                    }.start();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    DatabaseReference customerCancelRef;
+    ValueEventListener customerCancelListener;
+    private void ifRequestCanceled() {
+        customerCancelRef=FirebaseDatabase.getInstance().getReference().child("request_cancel").child(user_id);
+        customerCancelListener=customerCancelRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()){
+                    customerCancelRef.removeValue();
+                    Toast.makeText(RiderMapActivity.this, "Customer cancelled the ride", Toast.LENGTH_SHORT).show();
+                    requestCancled();
                 }
             }
 
@@ -426,7 +481,16 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
         mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
 
         if (mStatus.isChecked()&&latlngDestination!=null){
-            addRiderRoute();
+            if (customerId==null){
+                DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation");
+                GeoFire geoFireLocation=new GeoFire(locationref);
+                geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+            }
+            else{
+                DatabaseReference driverWorkingRef=FirebaseDatabase.getInstance().getReference().child("drivers_working");
+                GeoFire geoFireLocation=new GeoFire(driverWorkingRef);
+                geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+            }
         }
     }
 

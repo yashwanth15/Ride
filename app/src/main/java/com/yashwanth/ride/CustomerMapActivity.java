@@ -20,6 +20,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.directions.route.AbstractRouting;
@@ -74,22 +75,22 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
     LocationRequest mLocationRequest;
     SupportMapFragment mapFragment;
 
-    private LatLng latlngDestination;
+    private LatLng latlngDestination,latlngLocation;
 
     private Marker destinationMarker;
-
-    private LatLng destinationLatlng;
 
     private DrawerLayout mDrawerLayout;
     private ActionBarDrawerToggle mToggle;
 
     private Toolbar mToolbar;
 
-    private Button mBook;
+    private Button mBook,mCancel;
 
     private String mUserId;
 
-    private ProgressDialog progressDialogBookRide;
+    private Boolean driverFoundBol=false;
+
+    private TextView mBookTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,10 +109,12 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
         CustomerMapActivityObject=this;
 
         mBook=(Button)findViewById(R.id.book);
+        mCancel=(Button)findViewById(R.id.cancel);
+
+        mBookTextView=(TextView) findViewById(R.id.bookRideTextView);
 
         mUserId=FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-        progressDialogBookRide=new ProgressDialog(CustomerMapActivity.this);
 
         polylines = new ArrayList<>();
 
@@ -124,8 +127,8 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
             public void onPlaceSelected(Place place) {
                 // TODO: Get info about the selected place.
                 latlngDestination=place.getLatLng();
-                destinationLatlng=place.getLatLng();
                 destinationMarker=mMap.addMarker(new MarkerOptions().position(latlngDestination).title("destination"));
+                getRiderRoute(latlngLocation,latlngDestination);
             }
 
             @Override
@@ -342,6 +345,7 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
     @Override
     public void onLocationChanged(Location location) {
         mLastLocation =location;
+        latlngLocation=new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude());
 
         LatLng latLng=new LatLng(location.getLatitude(),location.getLongitude());
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
@@ -464,8 +468,9 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
 
     private void bookRider(final String key) {
         mBook.setVisibility(View.GONE);
-        progressDialogBookRide.setMessage("Booking your Ride");
-        progressDialogBookRide.show();
+        mBookTextView.setText("Booking Your Ride...");
+        mBookTextView.setVisibility(View.VISIBLE);
+        mCancel.setVisibility(View.VISIBLE);
 
         mMap.clear();
         //checking if driver is already working
@@ -475,9 +480,12 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if(dataSnapshot.exists()){
                     Toast.makeText(CustomerMapActivity.this, "Sorry, driver is already working!", Toast.LENGTH_LONG).show();
-                    progressDialogBookRide.dismiss();
+                    mCancel.setVisibility(View.GONE);
+                    mBookTextView.setVisibility(View.GONE);
                     markersLocation.clear();
                     getCloseDrivers();
+                    destinationMarker=mMap.addMarker(new MarkerOptions().position(latlngDestination).title("destination"));
+                    getRiderRoute(latlngLocation,latlngDestination);
                 }
                 else{
                     /*DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation").child(key);
@@ -496,30 +504,41 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
                     geoFireLocation.setLocation("location",new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
                     geoFireDestination.setLocation("destination",new GeoLocation(latlngDestination.latitude,latlngDestination.longitude));
 
-                    Toast.makeText(CustomerMapActivity.this, "Wait a minute for the driver to respond to your request", Toast.LENGTH_LONG).show();
 
-
-                    new CountDownTimer(40000, 1000) {
+                    final CountDownTimer countDownTimer=new CountDownTimer(40000, 1000) {
 
                         public void onTick(long millisUntilFinished) {
 
                         }
 
                         public void onFinish() {
-                            if (driverWorkingRef!=null){
-                                driverWorkingRef.removeEventListener(driverWorkingEventListener);
+                            if (!driverFoundBol){
+                                onDriverCancled(key);
                                 Toast.makeText(CustomerMapActivity.this, "Driver not responding, book another one", Toast.LENGTH_SHORT).show();
-                                progressDialogBookRide.dismiss();
-                                markersLocation.clear();
-                                getCloseDrivers();
-
-                                DatabaseReference customerRequestRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(key);
-                                DatabaseReference customerLocationRef=FirebaseDatabase.getInstance().getReference().child("customer_location").child(mUserId);
-                                customerRequestRef.removeValue();
-                                customerLocationRef.removeValue();
                             }
                         }
                     }.start();
+
+                    mCancel.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            countDownTimer.cancel();
+                            if (driverFoundBol){
+                                DatabaseReference customerCancelRef=FirebaseDatabase.getInstance().getReference().child("request_cancel").child(key);
+                                customerCancelRef.setValue(true);
+                            }
+                            onDriverCancled(key);
+
+                            if (assignedDriverMarker!=null){
+                                assignedDriverMarker.remove();
+                            }
+                            if (mDriverDestinationMarker!=null){
+                                mDriverDestinationMarker.remove();
+                            }
+                            eraseRoute();
+
+                        }
+                    });
 
                     getAssignedRiderLocation(key);
                 }
@@ -531,6 +550,23 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
             }
         });
 
+    }
+
+    private void onDriverCancled(String key) {
+        mCancel.setVisibility(View.GONE);
+        mBookTextView.setVisibility(View.GONE);
+        driverFoundBol=false;
+        if (driverWorkingRef!=null){
+            driverWorkingRef.removeEventListener(driverWorkingEventListener);
+        }
+        markersLocation.clear();
+        getCloseDrivers();
+        destinationMarker=mMap.addMarker(new MarkerOptions().position(latlngDestination).title("destination"));
+        getRiderRoute(latlngLocation,latlngDestination);
+        DatabaseReference customerRequestRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(key);
+        DatabaseReference customerLocationRef=FirebaseDatabase.getInstance().getReference().child("customer_location").child(mUserId);
+        customerRequestRef.removeValue();
+        customerLocationRef.removeValue();
     }
 
 
@@ -550,6 +586,8 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()){
+                    mBookTextView.setText("Driver Arriving...");
+                    driverFoundBol=true;
                     List<Object> map=(List<Object>) dataSnapshot.getValue();
                     double locationLat=0;
                     double locationLng=0;
@@ -561,6 +599,19 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
                         locationLng=Double.parseDouble(map.get(1).toString());
                     }
                     final LatLng driverLocationLatLng=new LatLng(locationLat,locationLng);
+
+                    Location loc1=new Location("");
+                    loc1.setLatitude(mLastLocation.getLatitude());
+                    loc1.setLongitude(mLastLocation.getLatitude());
+
+                    Location loc2=new Location("");
+                    loc1.setLatitude(locationLat);
+                    loc1.setLongitude(locationLng);
+
+                    float distance=loc1.distanceTo(loc2);
+                    if (distance<10){
+                        mBookTextView.setText("Driver Arrived!");
+                    }
 
                     if (assignedDriverMarker!=null){
                         assignedDriverMarker.remove();
