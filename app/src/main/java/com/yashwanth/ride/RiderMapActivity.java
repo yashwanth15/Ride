@@ -74,7 +74,7 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
     LocationRequest mLocationRequest;
     SupportMapFragment mapFragment;
 
-    private String user_id;
+    private String user_id,customerId=null;
 
     private LatLng latlngDestination;
 
@@ -249,15 +249,16 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
             public void onClick(View view) {
                 mRequestAccepted=true;
                 countDownTimer.cancel();
+                DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation").child(user_id);
+                DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination").child(user_id);
+                locationref.removeValue();
+                destinationref.removeValue();
+
                 driverWorkingRef=FirebaseDatabase.getInstance().getReference().child("drivers_working");
                 GeoFire geoFireLocation=new GeoFire(driverWorkingRef);
                 geoFireLocation.setLocation(user_id,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
                 mBottomCardView.setVisibility(View.GONE);
 
-                DatabaseReference locationref = FirebaseDatabase.getInstance().getReference("driversAvailableLocation").child(user_id);
-                DatabaseReference destinationref = FirebaseDatabase.getInstance().getReference("driversAvailableDestination").child(user_id);
-                locationref.removeValue();
-                destinationref.removeValue();
                 if (assignedCustomerRef!=null){
                     assignedCustomerRef.removeEventListener(assignedCustomerListener);
                 }
@@ -266,6 +267,7 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
         mNo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
                 mRequestAccepted=false;
                 requestCancled();
             }
@@ -273,15 +275,25 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
     }
 
     private void requestCancled() {
+        assignedCustomerRef.removeValue();
+
         if (pickupMarker!=null){
             pickupMarker.remove();
         }
         if (customerDestinationMarker!=null){
             customerDestinationMarker.remove();
         }
-        customerId=null;
         eraseRoute();
+        mMap.clear();
         mBottomCardView.setVisibility(View.GONE);
+
+        DatabaseReference driverCancelRef=FirebaseDatabase.getInstance().getReference().child("request_cancel").child(customerId);
+        if(driverCancelRef!=null){
+            driverCancelRef.setValue(true);
+        }
+
+        countDownTimer.cancel();
+        customerId=null;
         getAssignedCustomer();
         driverWorkingRef=FirebaseDatabase.getInstance().getReference().child("drivers_working").child(user_id);
         driverWorkingRef.removeValue();
@@ -291,7 +303,7 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
         }
     }
 
-    String customerId;
+
     DatabaseReference assignedCustomerRef;
     ValueEventListener assignedCustomerListener;
     CountDownTimer countDownTimer;
@@ -302,7 +314,9 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()&&customerId==null){
                     ifRequestCanceled();
-                    customerId=dataSnapshot.getKey();
+                    for (DataSnapshot userSnapshot: dataSnapshot.getChildren()) {
+                        customerId = userSnapshot.getKey();
+                    }
                     getAssignedCustomerLocation();
                     mBottomCardView.setVisibility(View.VISIBLE);
                     if (assignedCustomerRef!=null){
@@ -338,6 +352,8 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()){
+                    DatabaseReference customerRequestRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(user_id);
+                    customerRequestRef.removeValue();
                     customerCancelRef.removeValue();
                     Toast.makeText(RiderMapActivity.this, "Customer cancelled the ride", Toast.LENGTH_SHORT).show();
                     requestCancled();
@@ -478,7 +494,7 @@ public class RiderMapActivity extends AppCompatActivity implements OnMapReadyCal
 
         LatLng latLng=new LatLng(location.getLatitude(),location.getLongitude());
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-        mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,15.0f));
 
         if (mStatus.isChecked()&&latlngDestination!=null){
             if (customerId==null){

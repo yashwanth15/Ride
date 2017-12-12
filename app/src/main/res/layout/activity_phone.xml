@@ -4,71 +4,82 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/black"
     tools:context="com.yashwanth.ride.PhoneActivity">
+
+    <TextView
+        android:id="@+id/rideName1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="130dp"
+        android:text="R I D E"
+        android:textColor="@color/white"
+        android:textSize="40dp" />
 
     <EditText
         android:id="@+id/phoneNumber"
         android:layout_width="250dp"
-        android:layout_height="50dp"
+        android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
-        android:phoneNumber="true"
-        android:layout_marginTop="41dp"
-        android:ems="10"
-        android:padding="10dp"
-        android:inputType="phone"
-        android:hint="Phone No."/>
+        android:layout_marginTop="200dp"
+        android:layout_below="@+id/rideName1"
+        android:background="@color/white"
+        android:padding="20dp"
+        android:hint="Phone Number"
+        android:inputType="phone" />
 
     <Button
         android:id="@+id/sendOTP"
-        android:layout_width="wrap_content"
+        android:layout_width="250dp"
+        android:layout_centerHorizontal="true"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/phoneNumber"
-        android:layout_marginTop="49dp"
         android:text="Send OTP"
-        android:layout_alignLeft="@+id/phoneNumber"
-        android:layout_alignStart="@+id/phoneNumber"
-        android:layout_alignRight="@+id/phoneNumber"
-        android:layout_alignEnd="@+id/phoneNumber"/>
+        android:background="@color/white"
+        android:layout_below="@+id/phoneNumber"
+        android:layout_marginTop="50dp"/>
 
-    <ImageView
-        android:id="@+id/mobileLogo"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_alignTop="@+id/phoneNumber"
-        android:layout_marginTop="7dp"
-        android:src="@drawable/ic_phone_iphone_black_24dp"
-        android:layout_toLeftOf="@+id/phoneNumber"
-        android:layout_toStartOf="@+id/phoneNumber" />
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
+            <TextView
+                android:id="@+id/rideName2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="130dp"
+                android:text="R I D E"
+                android:textColor="@color/white"
+                android:textSize="40dp" />
+
             <EditText
                 android:id="@+id/OTPeditText"
-                android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:visibility="gone"
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
                 android:layout_centerHorizontal="true"
-                android:layout_marginTop="41dp"
-                android:ems="10"
-                android:padding="10dp"
+                android:layout_marginTop="200dp"
+                android:layout_below="@+id/rideName2"
+                android:background="@color/white"
+                android:padding="20dp"
+                android:visibility="gone"
                 android:inputType="phone"
-                android:hint="OTP Here ..."/>
+                android:hint="OTP Here ..." />
 
             <Button
                 android:id="@+id/OTPVERIFY"
-                android:layout_width="wrap_content"
+                android:layout_width="250dp"
+                android:layout_centerHorizontal="true"
                 android:layout_height="wrap_content"
+                android:background="@color/white"
+                android:layout_marginTop="50dp"
                 android:layout_below="@+id/OTPeditText"
-                android:layout_marginTop="49dp"
                 android:text="Verify"
-                android:visibility="gone"
-                android:layout_alignLeft="@+id/OTPeditText"
-                android:layout_alignStart="@+id/OTPeditText"
-                android:layout_alignRight="@+id/OTPeditText"
-                android:layout_alignEnd="@+id/OTPeditText" />
+                android:visibility="gone" />
         </RelativeLayout>
     </FrameLayout>
 

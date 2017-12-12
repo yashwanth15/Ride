@@ -34,7 +34,7 @@ public class Something extends AppCompatActivity {
                 else if (CustomerOrRider.equals("customer")){
                     CustomerMapActivity.CustomerMapActivityObject.finish();
                 }
-                startActivity(new Intent(Something.this,PhoneActivity.class));
+                startActivity(new Intent(Something.this,MainActivity.class));
                 finish();
             }
         });

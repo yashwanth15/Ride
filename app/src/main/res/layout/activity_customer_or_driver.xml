@@ -5,23 +5,44 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:background="@color/black"
     tools:context="com.yashwanth.ride.CustomerOrDriverActivity">
 
-    <Button
-        android:layout_width="match_parent"
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="customer"
-        android:id="@+id/customer"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginTop="193dp" />
-    <Button
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="130dp"
+        android:text="R I D E"
+        android:textColor="@color/white"
+        android:textSize="40dp" />
+
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="rider"
-        android:id="@+id/rider"
-        android:layout_below="@+id/customer"/>
+        android:layout_alignParentBottom="true"
+        android:weightSum="2"
+        android:layout_marginBottom="50dp">
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="customer"
+            android:background="@color/lightBlack"
+            android:textColor="@color/white"
+            android:id="@+id/customer"
+            android:layout_weight="1"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="rider"
+            android:background="@color/white"
+            android:textColor="@color/black"
+            android:id="@+id/rider"
+            android:layout_weight="1"/>
+    </LinearLayout>
+
 
 
 

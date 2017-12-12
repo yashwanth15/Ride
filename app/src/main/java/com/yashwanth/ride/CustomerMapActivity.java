@@ -504,6 +504,7 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
                     geoFireLocation.setLocation("location",new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
                     geoFireDestination.setLocation("destination",new GeoLocation(latlngDestination.latitude,latlngDestination.longitude));
 
+                    ifDriverCancled();
 
                     final CountDownTimer countDownTimer=new CountDownTimer(40000, 1000) {
 
@@ -513,7 +514,7 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
 
                         public void onFinish() {
                             if (!driverFoundBol){
-                                onDriverCancled(key);
+                                onDriverCancled();
                                 Toast.makeText(CustomerMapActivity.this, "Driver not responding, book another one", Toast.LENGTH_SHORT).show();
                             }
                         }
@@ -527,7 +528,7 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
                                 DatabaseReference customerCancelRef=FirebaseDatabase.getInstance().getReference().child("request_cancel").child(key);
                                 customerCancelRef.setValue(true);
                             }
-                            onDriverCancled(key);
+                            onDriverCancled();
 
                             if (assignedDriverMarker!=null){
                                 assignedDriverMarker.remove();
@@ -552,7 +553,27 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
 
     }
 
-    private void onDriverCancled(String key) {
+    ValueEventListener driverCancelListener;
+    private void ifDriverCancled() {
+        final DatabaseReference driverCancelRef=FirebaseDatabase.getInstance().getReference().child("request_cancel").child(mUserId);
+        driverCancelListener=driverCancelRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()){
+                    driverCancelRef.removeValue();
+                    Toast.makeText(CustomerMapActivity.this, "Driver cancelled", Toast.LENGTH_SHORT).show();
+                    onDriverCancled();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private void onDriverCancled() {
         mCancel.setVisibility(View.GONE);
         mBookTextView.setVisibility(View.GONE);
         driverFoundBol=false;
@@ -563,9 +584,7 @@ public class CustomerMapActivity extends AppCompatActivity implements OnMapReady
         getCloseDrivers();
         destinationMarker=mMap.addMarker(new MarkerOptions().position(latlngDestination).title("destination"));
         getRiderRoute(latlngLocation,latlngDestination);
-        DatabaseReference customerRequestRef=FirebaseDatabase.getInstance().getReference().child("customer_request").child(key);
         DatabaseReference customerLocationRef=FirebaseDatabase.getInstance().getReference().child("customer_location").child(mUserId);
-        customerRequestRef.removeValue();
         customerLocationRef.removeValue();
     }
 
